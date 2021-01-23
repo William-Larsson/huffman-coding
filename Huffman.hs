@@ -44,14 +44,17 @@ module Huffman where
 
     -- 1. ✅ convert the tuple-list to a list of Wtree LEAFS
     --    with the least common Chars first (in increasing order)   
-    -- 2. Process the new list until only 1 Wtree remains, by 
+    -- 2. ✅ Process the new list until only 1 Wtree remains, by 
     --    taking the first two elements in list and combining to a new
     --    tree recursively. 
     -- 3. Go through tree and remove the weights (convert to Htree)
 
 
     makeTree :: [(Integer, Char)] -> Htree
-    makeTree (x:xs) = Leaf 'a' -- just a placeholder for now!
+    makeTree (x:xs) = let
+        ordLeafs  = makeOrderedLeafs (x:xs)
+        wtreeList = makeWeightedTree ordLeafs 
+        in Leaf 'a' -- TODO: just a placeholder for now!
 
     -- Converts tuple-list to Wtree leafs. 
     -- Implicit use or input parameter. 
@@ -59,24 +62,51 @@ module Huffman where
     -- the first and second argument after L. 
     -- Output of map used as input for sortBy through "." 
     makeOrderedLeafs :: [(Integer, Char)] -> [Wtree]
-    makeOrderedLeafs = sortBy sortLeafs . map (uncurry L)
+    makeOrderedLeafs = sortBy sortNodes . map (uncurry L)
 
     -- Helper function for sortBy. 
     -- Takes two Wtree and returns the ordering
     -- of those two, aka if the first one is less than,
     -- greater than or equals to the second. 
-    sortLeafs :: Wtree -> Wtree -> Ordering 
-    sortLeafs (L w1 _) (L w2 _)
-        | w1 > w2 = GT 
-        | w1 < w2 = LT 
-        | otherwise = EQ
-        
+    sortNodes :: Wtree -> Wtree -> Ordering 
+    sortNodes (L w1 _) (L w2 _)     = compare w1 w2
+    sortNodes (L w1 _) (B w2 _ _)   = compare w1 w2 
+    sortNodes (B w1 _ _) (L w2 _)   = compare w1 w2
+    sortNodes (B w1 _ _) (B w2 _ _) = compare w1 w2
+
+
+    -- Builds an array containing a single Wtree, spanning the
+    -- entire Huffman tree based on combined node weights in new branches.  
+    -- Test with: makeWeightedTree $  makeOrderedLeafs (statistics "aaaaaaaaaaeeeeeeeeeeeeeeeiiiiiiiiiiiisssttttpppppppppppppn") 
+    makeWeightedTree :: [Wtree] -> [Wtree]
+    makeWeightedTree []  = []   -- No Wtree(s), Done                                      
+    makeWeightedTree [x] = [x]  -- Done
+
+    -- Wtree Leaf and Leaf
+    makeWeightedTree (t1@(L w1 _) : t2@(L w2 _) : xs)
+        | w1 > w2   = makeWeightedTree $ sortBy sortNodes (t1:t2:xs)
+        | otherwise = makeWeightedTree $ B (w1+w2) t1 t2 : xs 
+
+    -- Wtree Leaf and Branch
+    makeWeightedTree (t1@(L w1 _) : t2@(B w2 _ _) : xs)
+        | w1 > w2   = makeWeightedTree $ sortBy sortNodes (t1:t2:xs)
+        | otherwise = makeWeightedTree $ B (w1+w2) t1 t2 : xs 
+
+    -- Wtree Branch and Leaf
+    makeWeightedTree (t1@(B w1 _ _) : t2@(L w2 _) : xs)
+        |  w1 > w2  = makeWeightedTree $ sortBy sortNodes (t1:t2:xs)
+        | otherwise = makeWeightedTree $ B (w1+w2) t1 t2 : xs 
+
+    -- Wtree Branch and Branch 
+    makeWeightedTree (t1@(B w1 _ _) : t2@(B w2 _ _) : xs)
+        |  w1 > w2  = makeWeightedTree $ sortBy sortNodes (t1:t2:xs)
+        | otherwise = makeWeightedTree $ B (w1+w2) t1 t2 : xs 
+
+
+
+
     
-
-
-
-    
-    -- TODO: Deluppgift 1 -- klar?
-    --       Deluppgift 2 -- konstruera Huffman-trädet (Gör Wtree-löv, använd till att bygga Htree)
+    --       Deluppgift 1 -- klar?
+    --TODO:  Deluppgift 2 -- konstruera Huffman-trädet (Gör Wtree-löv, använd till att bygga Htree)
     --       Deluppgift 3 -- koda text till en bit-sekvens
     --       Deluppgift 4 -- avkoda en bit-sekvens till en text
