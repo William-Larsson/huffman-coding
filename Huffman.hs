@@ -1,5 +1,6 @@
 module Huffman where
     import Data.List ( sortBy )
+    import Data.Semigroup ( Semigroup(sconcat) )
 
     -- The Huffman tree
     data Htree = Leaf Char | Branch Htree Htree
@@ -77,32 +78,21 @@ module Huffman where
 
     -- Builds an array containing a single Wtree, spanning the
     -- entire Huffman tree based on combined node weights in new branches.  
+    -- Needs ordered leafs as the original input. 
     -- Test with: makeWeightedTree $  makeOrderedLeafs (statistics "aaaaaaaaaaeeeeeeeeeeeeeeeiiiiiiiiiiiisssttttpppppppppppppn") 
     makeWeightedTree :: [Wtree] -> [Wtree]
-    makeWeightedTree []  = []   -- No Wtree(s), Done                                      
-    makeWeightedTree [x] = [x]  -- Done
-
-    -- Wtree Leaf and Leaf
-    makeWeightedTree (t1@(L w1 _) : t2@(L w2 _) : xs)
-        | w1 > w2   = makeWeightedTree $ sortBy sortNodes (t1:t2:xs)
+    makeWeightedTree []  = []      -- No Wtree(s), Done      
+    makeWeightedTree [t] = [t]     -- Done
+    makeWeightedTree t@(t1:t2:xs) 
+        | w1 > w2   = makeWeightedTree $ sortBy sortNodes t
         | otherwise = makeWeightedTree $ B (w1+w2) t1 t2 : xs 
+        where 
+            w1 = getWeight t1
+            w2 = getWeight t2
 
-    -- Wtree Leaf and Branch
-    makeWeightedTree (t1@(L w1 _) : t2@(B w2 _ _) : xs)
-        | w1 > w2   = makeWeightedTree $ sortBy sortNodes (t1:t2:xs)
-        | otherwise = makeWeightedTree $ B (w1+w2) t1 t2 : xs 
-
-    -- Wtree Branch and Leaf
-    makeWeightedTree (t1@(B w1 _ _) : t2@(L w2 _) : xs)
-        |  w1 > w2  = makeWeightedTree $ sortBy sortNodes (t1:t2:xs)
-        | otherwise = makeWeightedTree $ B (w1+w2) t1 t2 : xs 
-
-    -- Wtree Branch and Branch 
-    makeWeightedTree (t1@(B w1 _ _) : t2@(B w2 _ _) : xs)
-        |  w1 > w2  = makeWeightedTree $ sortBy sortNodes (t1:t2:xs)
-        | otherwise = makeWeightedTree $ B (w1+w2) t1 t2 : xs 
-
-
+    getWeight :: Wtree -> Integer
+    getWeight (L w _)    = w
+    getWeight (B w _ _ ) = w 
 
 
     
