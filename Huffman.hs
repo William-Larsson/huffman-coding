@@ -65,15 +65,17 @@ module Huffman where
     makeOrderedLeafs :: [(Integer, Char)] -> [Wtree]
     makeOrderedLeafs = sortBy sortNodes . map (uncurry L)
 
+    -- Get the weight of any Wtree
+    getWeight :: Wtree -> Integer
+    getWeight (L w _)   = w
+    getWeight (B w _ _) = w 
+
     -- Helper function for sortBy. 
     -- Takes two Wtree and returns the ordering
     -- of those two, aka if the first one is less than,
     -- greater than or equals to the second. 
     sortNodes :: Wtree -> Wtree -> Ordering 
-    sortNodes (L w1 _) (L w2 _)     = compare w1 w2
-    sortNodes (L w1 _) (B w2 _ _)   = compare w1 w2 
-    sortNodes (B w1 _ _) (L w2 _)   = compare w1 w2
-    sortNodes (B w1 _ _) (B w2 _ _) = compare w1 w2
+    sortNodes t1 t2 = compare (getWeight t1) (getWeight t2)
 
 
     -- Builds an array containing a single Wtree, spanning the
@@ -90,9 +92,6 @@ module Huffman where
             w1 = getWeight t1
             w2 = getWeight t2
 
-    getWeight :: Wtree -> Integer
-    getWeight (L w _)    = w
-    getWeight (B w _ _ ) = w 
 
 
     
