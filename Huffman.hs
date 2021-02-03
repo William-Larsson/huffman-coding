@@ -130,33 +130,28 @@ module Huffman (Htree, statistics, maketree, encode, decode) where
 
 
 
-
-    --       Deluppgift 1 -- klar?
-    --       Deluppgift 2 -- konstruera Huffman-trädet (Gör Wtree-löv, använd till att bygga Htree)
-    --TODO:  Deluppgift 3 -- koda text till en bit-sekvens
-    --       Deluppgift 4 -- avkoda en bit-sekvens till en text
-
-
-
     -- =================== Sub-problem 5 ===================  --
 
-    
+    -- TODO: comment
     decode :: Htree -> [Integer] -> String
+    decode tree []   = []
     decode tree bits = char ++ decode tree bits'
         where
             (char, bits') = decodeChar tree bits
 
-
+    -- TODO: comment
     decodeChar :: Htree -> [Integer] -> (String, [Integer])
-    decodeChar _ []          = ("", [])
     decodeChar (Leaf c) bits = ([c], bits) 
     decodeChar (Branch lt rt) (x:xs) 
-        | x == 0    =  -- left tree
-        | otherwise = -- right tree
+        | x == 0    =  decodeChar lt xs 
+        | otherwise =  decodeChar rt xs
+    --decodeChar _ []          = ("", [])   
 
 
-    -- 0. Recursively call 1. append returned char to start of  [char] array ('char' ++ recursive call)
-    -- 1. Get entire list of[Integer]
-    -- 2. Traverse down tree according to first integer (0 = left, 1 = right)
-    -- 2.1 In every step, remove the integer from list
-    -- 3. When leaf found -> return char
+    -- TODO: Clean up the code before handing it in!
+
+
+    -- TODO: 
+    -- Current limitation:
+    --      one-char string get no bit code (and can therefore not be decoded as well)
+    --      cannot print å, ä, ö, instead it prints s\299 for example which represents a swedish char
