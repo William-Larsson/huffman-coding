@@ -96,29 +96,29 @@ module Huffman (Htree, statistics, maketree, encode, decode) where
     -- =================== Sub-problem 3 ===================  --
 
 
-    -- TODO: write comment
+    -- Builds an Htree from a given string and uses 
+    -- that tree to encode the string into a Huffman code. 
     encode :: String -> (Htree, [Integer])
     encode str = let 
         htree  = maketree $ statistics str
-        bitArr =  []
-        in (htree, bitArr) -- placeholder TODO: combine with buildBitEncoding
+        bitArr = buildBitEncoding str htree
+        in (htree, bitArr) 
 
-
-
-    -- TODO: test this func. 
-    -- TODO: write comment
+    -- Builds Huffman bit code from given String and Huffman tree
+    -- Recursively adds the bit code first char in the remaining string
+    -- to the beginning of the bit code array to preserve the characters order.
     buildBitEncoding :: String -> Htree -> [Integer]
     buildBitEncoding [] _        = []
     buildBitEncoding (x:xs) tree = getBitCode [] x tree ++ buildBitEncoding xs tree
 
-
-    -- TODO: This should be done, test with buildBitEncoding
-    -- TODO: write comment
+    -- Traverses the Huffman tree to find leaf matching given 
+    -- char. Stores bit code to that leaf in the accumulator.
+    -- Input: Bit code accumulator, Char to encode, Huffman tree.
     -- test with: getBitCode [] 'e' (maketree $ statistics "aaaaaaaaaaeeeeeeeeeeeeeeeiiiiiiiiiiiisssttttpppppppppppppn")
     getBitCode :: [Integer] -> Char -> Htree -> [Integer]
     getBitCode acc char (Leaf c)
-        | char == c = acc -- ?? 
-        | otherwise = []  -- ?? 
+        | char == c = acc 
+        | otherwise = []  
 
     getBitCode acc char (Branch lt rt)
         | not (null left)  = left 
@@ -127,8 +127,6 @@ module Huffman (Htree, statistics, maketree, encode, decode) where
         where
             left  = getBitCode (acc ++ [0]) char lt
             right = getBitCode (acc ++ [1]) char rt
-
-    -- smaller weights are on the left branch.
 
 
 
@@ -144,4 +142,21 @@ module Huffman (Htree, statistics, maketree, encode, decode) where
 
     
     decode :: Htree -> [Integer] -> String
-    decode tree bits = "placeholder" -- placeholder
+    decode tree bits = char ++ decode tree bits'
+        where
+            (char, bits') = decodeChar tree bits
+
+
+    decodeChar :: Htree -> [Integer] -> (String, [Integer])
+    decodeChar _ []          = ("", [])
+    decodeChar (Leaf c) bits = ([c], bits) 
+    decodeChar (Branch lt rt) (x:xs) 
+        | x == 0    =  -- left tree
+        | otherwise = -- right tree
+
+
+    -- 0. Recursively call 1. append returned char to start of  [char] array ('char' ++ recursive call)
+    -- 1. Get entire list of[Integer]
+    -- 2. Traverse down tree according to first integer (0 = left, 1 = right)
+    -- 2.1 In every step, remove the integer from list
+    -- 3. When leaf found -> return char
