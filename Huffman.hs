@@ -1,79 +1,83 @@
-module Huffman (Htree, statistics, maketree, encode, decode) where
-    import Data.List ( sort )
+module Huffman (Htree (..), statistics, maketree, encode, decode) where
+    import Data.List ( sort, nub )
 
-    -- The Huffman tree
-    data Htree = Leaf Char | Branch Htree Htree deriving (Show, Read)
-    -- A Weighted tree. L = leaf, B = branch , Integer = weight
-    data Wtree = L Integer Char | B Integer Wtree Wtree deriving (Show, Read)
+    -- Alias for Integers used as weights in Huffman tree
+    type Weight  = Integer
+    -- Alias for bit codes used in en-/decoding
+    type BitCode = [Integer]
 
-    -- Implements type class Eq for Htree 
+    -- Data type: Htree
+    -- Recursive data type representing a Huffman tree
+    data Htree = Leaf Char | Branch Htree Htree 
+        deriving (Show, Read)
+
+    -- Implementation of type class Eq for data type Htree 
     instance Eq Htree where
         (Branch lt rt) == (Branch lt' rt') = lt == lt' && rt == rt'
         (Leaf c) == (Leaf c')              = c == c'
         _ == _                             = False
+    
+    -- Data type: Wtree
+    -- A Weighted tree. L = leaf, B = branch , Weight = the weight
+    data Wtree = L Weight Char | B Weight Wtree Wtree 
+        deriving (Show, Read)
 
-    -- Implements type class Eq for Wtree
+    -- Implementation of type class Eq for data type Wtree
     instance Eq Wtree where
         t1@(B _ lt rt) == t2@(B _ lt' rt') = 
             getWeight t1 == getWeight t2 
             && lt == lt' 
             && rt == rt'
 
-        l1@(L i c) == l2@(L i' c') = 
+        l1@(L _ c) == l2@(L _ c') = 
             getWeight l1 == getWeight l2 
             && c == c' 
 
         _ == _ = False
 
-    -- Implements type class Ord for Wtree
+    -- Implementation of type class Ord data type for Wtree
     instance Ord Wtree where
         t1 `compare` t2 = compare (getWeight t1) (getWeight t2)
 
-    -- Get the weight of any Wtree.
-    getWeight :: Wtree -> Integer
+    -- Function: getWeight
+    --
+    -- Returns the weight of any Wtree.
+    getWeight :: Wtree -> Weight
     getWeight (L w _)   = w
     getWeight (B w _ _) = w 
 
-
-    -- =================== Sub-problem 1 ===================  --
-
-
-    -- Takes a text-string and returns a list of tuples.
-    -- This tuple is the unique Chars from the String and 
-    -- number of occurrences for that Char in the String
-    -- ex: "test" -> [(2, 't'), (1,'e'), (1,'s')]
-    statistics :: String -> [(Integer, Char)]
-    statistics ""  = [] --error "No string given as input."   
+    -- Function: statistics
+    --
+    -- Returns tuple which is the unique Chars from the given String 
+    -- and the number of occurrences for that Char in the String
+    -- Uses buildFrequencyPairs as helper function.
+    statistics :: String -> [(Weight, Char)]
+    statistics ""  = []   
     statistics str = let 
-        noDup = rmDuplicate str
+        noDup = nub str
         in buildFrequencyPair noDup str
 
-    -- Removes duplicate elements in an Array
-    -- Ex: Removes all duplicate Chars in a String
-    rmDuplicate :: Eq a => [a] -> [a]
-    rmDuplicate [] = []
-    rmDuplicate (x:xs)  
-        | x `elem` xs = rmDuplicate xs
-        | otherwise   = x : rmDuplicate xs
+    -- Function: buildFrequencyPair
+    --
+    -- Maps every element in the the first array to tuples 
+    -- with the element and its nr of occurrences in the second array
+    buildFrequencyPair :: Eq b => [b] -> [b] -> [(Weight, b)]
+    buildFrequencyPair cs str = map (\char -> (countElem char str, char)) cs
 
-    -- Maps every Char in the "no duplicates"-arr to 
-    -- tuples with the Char and nr of occurrences in the String
-    buildFrequencyPair :: Eq b => [b] -> [b] -> [(Integer, b)]
-    buildFrequencyPair cs str = map (\char -> (elemInArray char str, char)) cs
+    -- Function: countElem
+    --
+    -- Counts all identical elements in given array
+    countElem :: Eq a => a -> [a] -> Weight
+    countElem elem arr = fromIntegral $ length [e | e <- arr, e == elem]
 
-    -- Counts all identical elements in given Array
-    -- Ex: counts all instances of a Char in a given String
-    elemInArray :: Eq a => a -> [a] -> Integer
-    elemInArray elem arr = fromIntegral $ length [e | e <- arr, e == elem]
-
-
-    -- =================== Sub-problem 2 ===================  --
-
-
+    -- Function: maketree
+    --
     -- Makes a Huffman tree by creating ordered leafs from 
-    -- given [(Integer, Char)]-array and used those to build 
+    -- given [(Integer, Char)]-array and uses those to build 
     -- a Wtree. Finally, converts weighted tree to Htree.
-    maketree :: [(Integer, Char)] -> Htree
+    -- Uses makeOrderedLeafs, makeWeightedTree and convertToHtree as 
+    -- helper functions. 
+    maketree :: [(Weight, Char)] -> Htree
     maketree []       = error "Input tuple array is empty."
     maketree [(_, c)] = Branch (Leaf c) (Leaf c) -- if only one "leaf"
     maketree (x:xs)   = let
@@ -81,16 +85,22 @@ module Huffman (Htree, statistics, maketree, encode, decode) where
         wtree     = makeWeightedTree ordLeafs 
         in convertToHtree wtree
 
-    -- Maps tuple-list of (Weight, Char) to Wtree leafs and 
-    -- returns the leafs in ascending orderings based on weight.  
-    makeOrderedLeafs :: [(Integer, Char)] -> [Wtree]
+    -- Function: makeOrderedLeafs
+    --
+    -- Maps tuple-list to Wtree leafs and returns the 
+    -- leafs in ascending orderings based on weight.  
+    makeOrderedLeafs :: [(Weight, Char)] -> [Wtree]
     makeOrderedLeafs = sort . map (uncurry L)
 
+    -- Function: makeWeightedTree
+    --
     -- Builds an array containing a single Wtree, spanning the
     -- entire Huffman tree based on combined node weights in new branches.  
     -- Needs ordered leafs as the original input. 
+    -- Uses getWeight as helper function.
     makeWeightedTree :: [Wtree] -> Wtree
-    makeWeightedTree []  = error "Can't make weighted tree from empty input Wtree array"     
+    makeWeightedTree []  = 
+        error "Can't make weighted tree from empty input Wtree array"     
     makeWeightedTree [t] = t
     makeWeightedTree t@(t1:t2:xs) 
         | w1 > w2   = makeWeightedTree $ sort t
@@ -99,6 +109,8 @@ module Huffman (Htree, statistics, maketree, encode, decode) where
             w1 = getWeight t1
             w2 = getWeight t2
 
+    -- Function: convertToHtree
+    --
     -- Traverses recursively down the Wtree structure
     -- until a leaf is found and clones that structure
     -- to a Htree with leafs of the same char value. 
@@ -106,30 +118,34 @@ module Huffman (Htree, statistics, maketree, encode, decode) where
     convertToHtree (L _ c)     = Leaf c
     convertToHtree (B _ lb rb) = Branch (convertToHtree lb) (convertToHtree rb) 
 
-
-    -- =================== Sub-problem 3 ===================  --
-
-
+    -- Function: encode
+    --
     -- Builds an Htree from a given string and uses 
     -- that tree to encode the string into a Huffman code. 
-    encode :: String -> (Htree, [Integer])
+    -- Uses maketree, statistics and buildBitEncoding as 
+    -- helper functions. 
+    encode :: String -> (Htree, BitCode)
     encode str = let 
         htree  = maketree $ statistics str
         bitArr = buildBitEncoding str htree
         in (htree, bitArr) 
 
+    -- Function: buildBitEncoding
+    -- 
     -- Builds Huffman bit code from given String and Huffman tree
     -- Recursively adds the bit code first char in the remaining string
     -- to the beginning of the bit code array to preserve the characters order.
-    buildBitEncoding :: String -> Htree -> [Integer]
+    -- Uses getBitCode as helper function. 
+    buildBitEncoding :: String -> Htree -> BitCode
     buildBitEncoding [] _        = []
     buildBitEncoding (x:xs) tree = getBitCode [] x tree ++ buildBitEncoding xs tree
 
+    -- Function: getBitCode
+    --
     -- Traverses the Huffman tree to find leaf matching given 
     -- char. Stores bit code to that leaf in the accumulator.
     -- Input: Bit code accumulator, Char to encode, Huffman tree.
-    -- test with: getBitCode [] 'e' (maketree $ statistics )
-    getBitCode :: [Integer] -> Char -> Htree -> [Integer]
+    getBitCode :: BitCode -> Char -> Htree -> BitCode
     getBitCode acc char (Leaf c)
         | char == c = acc 
         | otherwise = []  
@@ -142,39 +158,26 @@ module Huffman (Htree, statistics, maketree, encode, decode) where
             left  = getBitCode (acc ++ [0]) char lt
             right = getBitCode (acc ++ [1]) char rt
 
-
-    -- =================== Sub-problem 4 ===================  --
-
+    -- Function: decode
+    --
     -- Recursively decodes integer pattern based on given Htree.
     -- Appends found Char to beginning of String to maintain 
     -- original order of characters. 
-    decode :: Htree -> [Integer] -> String
+    -- Uses decodeChar as helper function.
+    decode :: Htree -> BitCode -> String
     decode tree []   = []
     decode tree bits = char ++ decode tree bits'
         where
             (char, bits') = decodeChar tree bits
 
+    -- Function: decodeChar
+    --
     -- Traverses down the Htree Branches until Leaf is found or bit code
     -- is empty. If next bit is 0 go to left subtree, else go
     -- to right subtree. Returns the leaf value and unused bit code.
-    decodeChar :: Htree -> [Integer] -> (String, [Integer])
-    decodeChar (Branch _ _) []       = ("", [])
-    decodeChar (Leaf c) bits         = ([c], bits) 
+    decodeChar :: Htree -> BitCode -> (String, BitCode)
+    decodeChar (Branch _ _) [] = ("", [])
+    decodeChar (Leaf c) bits   = ([c], bits) 
     decodeChar (Branch lt rt) (x:xs) 
-        | x == 0    =  decodeChar lt xs 
-        | otherwise =  decodeChar rt xs
-
-
-
-    -- Good test string: "aaaaaaaaaaeeeeeeeeeeeeeeeiiiiiiiiiiiisssttttpppppppppppppn"
-
-    -- TODO: 
-    -- Current limitations:
-    --      one-char string get no bit code (and can therefore not be decoded as well)
-    --      cannot print å, ä, ö, instead it prints s\299 for example which represents a swedish char
-    --      (sort of) cannot take empty input string "" (as long as output tree is not accessed, its fine)
-
-
-    -- Bonus: 
-    --      Can handle only one leaf
-    --      Wtree derives ord, Eq read and show. Htree derives read, show and Eq (Ord makes no sense..?). 
+        | x == 0    = decodeChar lt xs 
+        | otherwise = decodeChar rt xs
